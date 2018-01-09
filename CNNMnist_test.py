@@ -18,6 +18,7 @@ sess = tf.InteractiveSession()
 x = tf.placeholder("float", shape=[None, 784])
 # 输出类别值y_也是一个二维的张量，其中每一行为一个10纬的one-hot向量，用于代表对应的MNIST图片的类别
 # 10纬的one-hot向量指[0,0,0,0,0,0,0,0,0]，举例：当一张MNIST图片上显示的数字为1时，那么对应的向量为[0,1,0,0,0,0,0,0,0]
+# 当一张MNIST图片上显示的数字为3时，那么对应的向量为[0,0,0,1,0,0,0,0,0]
 y_ = tf.placeholder("float", shape=[None, 10])
 
 
@@ -25,11 +26,17 @@ y_ = tf.placeholder("float", shape=[None, 10])
 
 
 # 权重初始化
+# shape 一维整数张量或Python数组。输出张量的形状。
+# stddev 一个零维的张量或Python类型值` D `。截尾正态分布的标准差。
+# 返回值 创建一个新的变量，用给定的初始化变量。该变量会被添加的图形集合GraphKeys.GLOBAL_VARIABLES。如果该变量是可训练的
+# 也会被添加到图形集合GraphKeys.TRAINABLE_VARIABLES
 def weight_variable(shape):
     initial = tf.truncated_normal(shape, stddev=0.1)
     return tf.Variable(initial)
 
-
+# 创建一个常量张量
+# value 一个恒定值（或清单）的输出型` D `。即将该常量填充到给定的shape张量矩阵中
+# shape 所得张量的可选维数。
 def bias_variable(shape):
     initial = tf.constant(0.1, shape=shape)
     return tf.Variable(initial)
@@ -37,12 +44,18 @@ def bias_variable(shape):
 
 # 卷积和池化
 
-# 卷积使用步长为1，边距为0，保证输入和输出的大小保持一致
+# tf.nn.conv2d(input, filter, strides, padding, use_cudnn_on_gpu=None, name=None)
+# 解释：这个函数的作用是对一个四维的输入数据 input 和四维的卷积核 filter 进行操作，然后对输入数据进行一个二维的卷积操作，最后得到卷积之后的结果。
+
+
+# 卷积使用步长为1，边距为0，保证输入和输出的大小保持一致。任意的卷积核，能同时在不同的通道上面进行卷积操作。
+# strides=[1, 1, 1, 1]表示卷积核对每个像素点进行卷积，即在二维屏幕上面，两个轴方向的步长都是1
 def conv2d(x, w):
     return tf.nn.conv2d(x, w, strides=[1, 1, 1, 1], padding="SAME")
 
 
 # 池化使用2*2做模板
+# strides=[1, 2, 2, 1]表示卷积核对每隔一个像素点进行卷积，即在二维屏幕上面，两个轴方向的步长都是2。
 def max_pool_2x2(x):
     return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME")
 
@@ -81,7 +94,7 @@ h_pool2_flat = tf.reshape(h_pool2, [-1, 7 * 7 * 64])
 h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
 
 # Dropout
-# 我们在输出层之前加入dropout为了减少过拟合，我们在输出层之前加入dropout。我们用一个placeholder来代表一个神经元的输出在dropout中保持不变的概率。
+# 我们在输出层之前加入dropout为了减少过拟合。我们用一个placeholder来代表一个神经元的输出在dropout中保持不变的概率。
 # 这样我们可以在训练过程中启用dropout，在测试过程中关闭dropout。 TensorFlow的tf.nn.dropout操作除了可以屏蔽神经元的输出外，
 # 还会自动处理神经元输出值的scale。所以用dropout的时候可以不用考虑scale。
 keep_prob = tf.placeholder("float")
@@ -108,9 +121,16 @@ accuracy = tf.reduce_mean(tf.cast(correct_predict, "float"))
 # 开始会话
 sess.run(tf.global_variables_initializer())
 # 训练两万次，每次取50数据量为一批，每100次迭代输出一次日志
-for i in range(5000):
+for i in range(5):
     print('i = %d ' % i)
-    batch = mnist.train.next_batch(50)
+    batch = mnist.train.next_batch(6)
+
+    print('===========================')
+    print(batch[0])
+    # print(sess.run(batch))
+    # print(sess.run(tf.shape(batch)))
+
+
     if i % 100 == 0:
         train_accuracy = accuracy.eval(feed_dict={x: batch[0], y_: batch[1], keep_prob: 1.0})
         print("step %d, training accuracy %g" % (i, train_accuracy))
